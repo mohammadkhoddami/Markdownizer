@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "markdownizer"
+version = "0.1.0"
+authors = [
+{ name="Mohamamd Hasan Khoddami", email="mohamamdh.khoddami@gmail.com" },
+]
+description = "Extract documentation from Python projects into Markdown without rewriting it"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Topic :: Documentation",
+    "Topic :: Software Development :: Documentation",
+]
+
+[project.scripts]
+markdownizer = "markdownizer.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["markdownizer*"]
