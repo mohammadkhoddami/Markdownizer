@@ -6,7 +6,6 @@ import ast
 import io
 import tokenize
 from dataclasses import dataclass, field
-from typing import Iterable
 
 
 @dataclass
@@ -150,9 +149,7 @@ def _extract_object(
         kind = "class"
         base_classes = [_base_name(b) for b in node.bases]
 
-    anchor_lineno = (
-        node.decorator_list[0].lineno if node.decorator_list else node.lineno
-    )
+    anchor_lineno = node.decorator_list[0].lineno if node.decorator_list else node.lineno
     end_lineno = getattr(node, "end_lineno", node.lineno)
 
     docstring = ast.get_docstring(node, clean=False)
@@ -175,9 +172,7 @@ def _extract_object(
             )
             if child_obj is not None:
                 children.append(child_obj)
-                owned_linenos.update(
-                    range(child_obj.anchor_lineno, child_obj.end_lineno + 1)
-                )
+                owned_linenos.update(range(child_obj.anchor_lineno, child_obj.end_lineno + 1))
                 owned_linenos.update(
                     ln
                     for ln, _ in all_comments
@@ -280,7 +275,7 @@ def _extract_module_level_assignment(
 
 def parse_file(file_path: str) -> tuple[DocObject, list[DocObject]]:
     """Parse a Python file and return (module_object, flat_list_of_all_objects)."""
-    with open(file_path, "r", encoding="utf-8") as fh:
+    with open(file_path, encoding="utf-8") as fh:
         source = fh.read()
 
     source_lines = source.splitlines()
@@ -322,9 +317,7 @@ def parse_file(file_path: str) -> tuple[DocObject, list[DocObject]]:
                 if obj.anchor_lineno - len(obj.preceding_comments) <= ln < obj.anchor_lineno:
                     owned_linenos.add(ln)
             for child in children:
-                owned_linenos.update(
-                    range(child.anchor_lineno, child.end_lineno + 1)
-                )
+                owned_linenos.update(range(child.anchor_lineno, child.end_lineno + 1))
                 for ln, _ in all_comments:
                     if (
                         child.anchor_lineno - len(child.preceding_comments)
@@ -348,9 +341,7 @@ def parse_file(file_path: str) -> tuple[DocObject, list[DocObject]]:
                 ):
                     owned_linenos.add(ln)
 
-    module_inline = [
-        text for ln, text in all_comments if ln not in owned_linenos
-    ]
+    module_inline = [text for ln, text in all_comments if ln not in owned_linenos]
 
     module_obj = DocObject(
         name=file_path,

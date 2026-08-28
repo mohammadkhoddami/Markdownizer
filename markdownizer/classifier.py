@@ -56,6 +56,19 @@ def _rightmost(name: str) -> str:
     return name.rsplit(".", 1)[-1] if name else ""
 
 
+def _decorator_base(dec: str) -> str:
+    """Return the bare decorator name, ignoring dotted prefixes and call args.
+
+    Examples:
+        "@receiver(post_save, sender=User)" -> "receiver"
+        "@django.db.transaction.atomic"      -> "atomic"
+        "@dataclass(frozen=True)"            -> "dataclass"
+    """
+    stripped = dec[1:] if dec.startswith("@") else dec
+    head = stripped.split("(", 1)[0]
+    return _rightmost(head)
+
+
 def classify(obj: DocObject) -> str:
     """Return a human-readable header label like 'DRF Serializer' or 'Async Function'."""
     if obj.kind == "module":
@@ -71,11 +84,9 @@ def classify(obj: DocObject) -> str:
 
     if obj.kind == "class":
         rightmost_bases = {_rightmost(b) for b in obj.base_classes}
-        decorator_rightmost = {
-            _rightmost(_strip_decorator_prefix(d)) for d in obj.decorators
-        }
+        decorator_names = {_decorator_base(d) for d in obj.decorators}
 
-        if "dataclass" in decorator_rightmost:
+        if "dataclass" in decorator_names:
             return "Dataclass"
 
         if rightmost_bases & _ENUM_BASES:
@@ -108,17 +119,13 @@ def classify(obj: DocObject) -> str:
         return "Class"
 
     if obj.kind == "function":
-        dec_rightmost = {_rightmost(_strip_decorator_prefix(d)) for d in obj.decorators}
-        if "property" in dec_rightmost or "cached_property" in dec_rightmost:
+        dec_names = {_decorator_base(d) for d in obj.decorators}
+        if "property" in dec_names or "cached_property" in dec_names:
             return "Property"
-        if "receiver" in dec_rightmost:
+        if "receiver" in dec_names:
             return "Signal Handler"
         if obj.is_method:
             return "Async Method" if obj.is_async else "Method"
         return "Async Function" if obj.is_async else "Function"
 
     return obj.kind.title()
-
-
-def _strip_decorator_prefix(dec: str) -> str:
-    return dec[1:] if dec.startswith("@") else dec

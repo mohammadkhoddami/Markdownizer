@@ -14,7 +14,12 @@ def _format_comments(comments: list[str]) -> str:
     return "\n".join(comments).rstrip() + "\n"
 
 
-def render_object(obj: DocObject, project_root: Path) -> str:
+def render_object(
+    obj: DocObject,
+    project_root: Path,
+    include_source: bool = True,
+    include_comments: bool = True,
+) -> str:
     """Render a single DocObject to a Markdown section."""
     label = classify(obj)
 
@@ -60,64 +65,88 @@ def render_object(obj: DocObject, project_root: Path) -> str:
         sections.append("_No docstring._")
         sections.append("")
 
-    preceding_text = _format_comments(obj.preceding_comments)
-    inline_text = _format_comments(obj.inline_comments)
-    if preceding_text or inline_text:
-        sections.append("## Comments")
-        sections.append("")
-        if preceding_text and inline_text:
-            sections.append("### Preceding")
+    if include_comments:
+        preceding_text = _format_comments(obj.preceding_comments)
+        inline_text = _format_comments(obj.inline_comments)
+        if preceding_text or inline_text:
+            sections.append("## Comments")
             sections.append("")
-            sections.append(preceding_text.rstrip())
-            sections.append("")
-            sections.append("### Inline")
-            sections.append("")
-            sections.append(inline_text.rstrip())
-            sections.append("")
-        else:
-            text = preceding_text or inline_text
-            sections.append(text.rstrip())
-            sections.append("")
+            if preceding_text and inline_text:
+                sections.append("### Preceding")
+                sections.append("")
+                sections.append(preceding_text.rstrip())
+                sections.append("")
+                sections.append("### Inline")
+                sections.append("")
+                sections.append(inline_text.rstrip())
+                sections.append("")
+            else:
+                text = preceding_text or inline_text
+                sections.append(text.rstrip())
+                sections.append("")
 
-    source = obj.source.rstrip()
-    if source:
-        sections.append("## Source Code")
-        sections.append("")
-        sections.append("```python")
-        sections.append(source)
-        sections.append("```")
-        sections.append("")
+    if include_source:
+        source = obj.source.rstrip()
+        if source:
+            sections.append("## Source Code")
+            sections.append("")
+            sections.append("```python")
+            sections.append(source)
+            sections.append("```")
+            sections.append("")
 
     return "\n".join(sections)
 
 
 def render_package_markdown(
     package_name: str,
-    module_obj: DocObject,
+    modules: list[DocObject],
     objects: list[DocObject],
     project_root: Path,
+    include_source: bool = True,
+    include_comments: bool = True,
 ) -> str:
-    """Render all objects belonging to one package into a single Markdown document."""
+    """Render all modules and objects belonging to one package into a single document.
+
+    The package heading appears exactly once: rendered from the ``__init__.py``
+    module when present (it classifies as ``Package``), otherwise emitted
+    directly here before the individual ``Module`` sections.
+    """
     parts: list[str] = []
 
-    header = [f"# Package: {package_name}", ""]
-    parts.append("\n".join(header))
+    if not modules or not any(m.file_path.endswith("__init__.py") for m in modules):
+        parts.append(f"# Package: {package_name}")
+        parts.append("")
 
-    module_section = render_object(module_obj, project_root)
-    parts.append(module_section)
+    for module in modules:
+        parts.append(
+            render_object(
+                module,
+                project_root,
+                include_source=include_source,
+                include_comments=include_comments,
+            )
+        )
 
     objects_sorted = sorted(objects, key=lambda o: (o.file_path, o.lineno))
     for obj in objects_sorted:
         parts.append("---")
         parts.append("")
-        parts.append(render_object(obj, project_root))
+        parts.append(
+            render_object(
+                obj,
+                project_root,
+                include_source=include_source,
+                include_comments=include_comments,
+            )
+        )
 
     return "\n".join(parts).rstrip() + "\n"
 
 
 def _relative_path(file_path: str, project_root: Path) -> str:
     try:
-        return str(Path(file_path).resolve().relative_to(project_root.resolve()))
+        return Path(file_path).resolve().relative_to(project_root.resolve()).as_posix()
     except ValueError:
         return file_path
 

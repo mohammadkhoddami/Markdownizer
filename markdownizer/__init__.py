@@ -6,5 +6,5 @@ It only extracts what already exists in the source code.
 
 from markdownizer.extractor import extract_project
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 __all__ = ["extract_project"]

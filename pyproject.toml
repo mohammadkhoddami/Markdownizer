@@ -4,24 +4,77 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "markdownizer"
-version = "0.1.0"
+dynamic = ["version"]
 authors = [
-{ name="Mohamamd Hasan Khoddami", email="mohamamdh.khoddami@gmail.com" },
+    { name = "Mohammad Hasan Khoddami", email = "mohammadh.khoddami@gmail.com" },
 ]
 description = "Extract documentation from Python projects into Markdown without rewriting it"
-readme = "README.md"
+readme = { file = "README.md", content-type = "text/markdown" }
+license = { file = "LICENSE" }
 requires-python = ">=3.9"
-license = { text = "MIT" }
+keywords = ["documentation", "markdown", "docstring", "django", "drf", "ast"]
 classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Topic :: Documentation",
     "Topic :: Software Development :: Documentation",
 ]
+dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/mohammadkhoddami/Markdownizer"
+Repository = "https://github.com/mohammadkhoddami/Markdownizer"
+Issues = "https://github.com/mohammadkhoddami/Markdownizer/issues"
 
 [project.scripts]
 markdownizer = "markdownizer.cli:main"
 
+[project.optional-dependencies]
+dev = [
+    "build>=1.0",
+    "mypy>=1.10",
+    "pytest>=8.0",
+    "pytest-cov>=5.0",
+    "ruff>=0.8",
+    "twine>=5.0",
+]
+
 [tool.setuptools.packages.find]
 include = ["markdownizer*"]
+
+[tool.setuptools.dynamic]
+version = { attr = "markdownizer.__version__" }
+
+[tool.setuptools.package-data]
+markdownizer = ["py.typed"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_return_any = true
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+disallow_untyped_defs = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q --cov=markdownizer --cov-report=term-missing"
+
+[tool.coverage.run]
+branch = true
