@@ -4,11 +4,12 @@ from __future__ import annotations
 
 import pytest
 
+import markdownizer
 from markdownizer.cli import main
 
 
 def test_version_flag(capsys):
-    _assert_exits_with(["--version"], "markdownizer 0.2.0", capsys)
+    _assert_exits_with(["--version"], f"markdownizer {markdownizer.__version__}", capsys)
 
 
 def test_help_flag(capsys):

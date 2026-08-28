@@ -19,7 +19,9 @@ ROOT = Path(__file__).resolve().parents[1]
 def test_version_matches_pyproject():
     pyproject = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
     assert pyproject["project"]["dynamic"] == ["version"]
-    assert markdownizer.__version__ == "0.2.0"
+    assert pyproject["tool"]["setuptools"]["dynamic"]["version"] == {
+        "attr": "markdownizer.__version__"
+    }
     assert re.match(r"^\d+\.\d+\.\d+$", markdownizer.__version__)
 
 
