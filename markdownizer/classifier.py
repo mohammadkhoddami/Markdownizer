@@ -1,8 +1,8 @@
-"""Classify a DocObject into a specialized documentation header kind."""
+"""Classify a renderable object into a specialized documentation header kind."""
 
 from __future__ import annotations
 
-from markdownizer.parser import DocObject
+from markdownizer.parser import Renderable
 
 _DJANGO_MODEL_BASES = {"Model", "AbstractUser", "AbstractBaseUser", "PermissionsMixin"}
 
@@ -69,7 +69,7 @@ def _decorator_base(dec: str) -> str:
     return _rightmost(head)
 
 
-def classify(obj: DocObject) -> str:
+def classify(obj: Renderable) -> str:
     """Return a human-readable header label like 'DRF Serializer' or 'Async Function'."""
     if obj.kind == "module":
         if obj.file_path.endswith("__init__.py"):

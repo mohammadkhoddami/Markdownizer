@@ -6,6 +6,33 @@ import ast
 import io
 import tokenize
 from dataclasses import dataclass, field
+from typing import Protocol
+
+
+class Renderable(Protocol):
+    """The structural contract satisfied by both ``DocObject`` and ``Symbol``.
+
+    Rendering and classification operate on any object exposing these
+    attributes, so the Project IR's ``Symbol`` can be rendered without
+    conversion.
+    """
+
+    name: str
+    qualified_name: str
+    kind: str
+    lineno: int
+    end_lineno: int
+    docstring: str | None
+    decorators: list[str]
+    source: str
+    preceding_comments: list[str]
+    inline_comments: list[str]
+    is_async: bool
+    is_method: bool
+    base_classes: list[str]
+    file_path: str
+    parameters: str
+    type_annotation: str
 
 
 @dataclass
@@ -25,6 +52,8 @@ class DocObject:
     is_method: bool = False
     base_classes: list[str] = field(default_factory=list)
     file_path: str = ""
+    parameters: str = ""
+    type_annotation: str = ""
 
 
 def _base_name(node: ast.expr) -> str:
@@ -41,6 +70,29 @@ def _base_name(node: ast.expr) -> str:
 
 def _rightmost_name(name: str) -> str:
     return name.rsplit(".", 1)[-1] if name else ""
+
+
+def _unparse_or_empty(node: ast.AST | None) -> str:
+    """Render an AST node back to source text, or ``""`` if unavailable."""
+    if node is None:
+        return ""
+    try:
+        return ast.unparse(node)
+    except Exception:
+        return ""
+
+
+def _function_parameters(node: ast.FunctionDef | ast.AsyncFunctionDef) -> str:
+    """Return the comma-separated parameter list, e.g. ``x: int = 1, *args``."""
+    if not (
+        node.args.posonlyargs
+        or node.args.args
+        or node.args.kwonlyargs
+        or node.args.vararg
+        or node.args.kwarg
+    ):
+        return ""
+    return _unparse_or_empty(node.args)
 
 
 def _decorator_source(node: ast.expr, source_lines: list[str]) -> str:
@@ -145,9 +197,13 @@ def _extract_object(
     if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
         kind = "function"
         base_classes: list[str] = []
+        parameters = _function_parameters(node)
+        type_annotation = _unparse_or_empty(node.returns)
     else:
         kind = "class"
         base_classes = [_base_name(b) for b in node.bases]
+        parameters = ""
+        type_annotation = ""
 
     anchor_lineno = node.decorator_list[0].lineno if node.decorator_list else node.lineno
     end_lineno = getattr(node, "end_lineno", node.lineno)
@@ -207,6 +263,8 @@ def _extract_object(
         is_method=is_method,
         base_classes=base_classes,
         file_path=file_path,
+        parameters=parameters,
+        type_annotation=type_annotation,
     )
     obj._children = children  # type: ignore[attr-defined]
     return obj
@@ -273,10 +331,14 @@ def _extract_module_level_assignment(
     )
 
 
-def parse_file(file_path: str) -> tuple[DocObject, list[DocObject]]:
-    """Parse a Python file and return (module_object, flat_list_of_all_objects)."""
-    with open(file_path, encoding="utf-8") as fh:
-        source = fh.read()
+def parse_file(file_path: str, source: str | None = None) -> tuple[DocObject, list[DocObject]]:
+    """Parse a Python file and return (module_object, flat_list_of_all_objects).
+
+    ``source`` may be passed in to avoid re-reading the file from disk.
+    """
+    if source is None:
+        with open(file_path, encoding="utf-8") as fh:
+            source = fh.read()
 
     source_lines = source.splitlines()
     all_comments = _collect_comments(source)

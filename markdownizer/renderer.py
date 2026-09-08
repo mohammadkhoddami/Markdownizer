@@ -1,11 +1,15 @@
-"""Render DocObjects into Markdown text."""
+"""Render DocObjects and IR Symbols into Markdown text."""
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from pathlib import Path
+from typing import Literal, Union
 
 from markdownizer.classifier import classify
-from markdownizer.parser import DocObject
+from markdownizer.parser import Renderable
+
+SourceMode = Union[bool, Literal["signature"]]
 
 
 def _format_comments(comments: list[str]) -> str:
@@ -14,13 +18,35 @@ def _format_comments(comments: list[str]) -> str:
     return "\n".join(comments).rstrip() + "\n"
 
 
+def format_signature(obj: Renderable) -> str:
+    """Return a single-line structural signature for a function or class.
+
+    Functions include their parameter list and return annotation; classes
+    include their base classes. Returns ``""`` for objects without a
+    signature (modules, signals, urlconfigs).
+    """
+    if obj.kind == "class":
+        bases = f"({', '.join(obj.base_classes)})" if obj.base_classes else ""
+        return f"class {obj.name}{bases}:"
+    if obj.kind == "function":
+        prefix = "async def" if obj.is_async else "def"
+        params = obj.parameters or ""
+        ret = f" -> {obj.type_annotation}" if obj.type_annotation else ""
+        return f"{prefix} {obj.name}({params}){ret}:"
+    return ""
+
+
 def render_object(
-    obj: DocObject,
-    project_root: Path,
-    include_source: bool = True,
+    obj: Renderable,
+    project_root: Path | None,
+    include_source: SourceMode = True,
     include_comments: bool = True,
 ) -> str:
-    """Render a single DocObject to a Markdown section."""
+    """Render a single object (DocObject or Symbol) to a Markdown section.
+
+    ``include_source`` may be ``True`` (full source), ``False`` (no source),
+    or ``"signature"`` (declaration line only).
+    """
     label = classify(obj)
 
     if obj.kind == "module":
@@ -86,24 +112,34 @@ def render_object(
                 sections.append("")
 
     if include_source:
-        source = obj.source.rstrip()
-        if source:
-            sections.append("## Source Code")
-            sections.append("")
-            sections.append("```python")
-            sections.append(source)
-            sections.append("```")
-            sections.append("")
+        if include_source == "signature":
+            signature = format_signature(obj)
+            if signature:
+                sections.append("## Signature")
+                sections.append("")
+                sections.append("```python")
+                sections.append(signature)
+                sections.append("```")
+                sections.append("")
+        else:
+            source = obj.source.rstrip()
+            if source:
+                sections.append("## Source Code")
+                sections.append("")
+                sections.append("```python")
+                sections.append(source)
+                sections.append("```")
+                sections.append("")
 
     return "\n".join(sections)
 
 
 def render_package_markdown(
     package_name: str,
-    modules: list[DocObject],
-    objects: list[DocObject],
-    project_root: Path,
-    include_source: bool = True,
+    modules: Sequence[Renderable],
+    objects: Sequence[Renderable],
+    project_root: Path | None,
+    include_source: SourceMode = True,
     include_comments: bool = True,
 ) -> str:
     """Render all modules and objects belonging to one package into a single document.
@@ -144,7 +180,9 @@ def render_package_markdown(
     return "\n".join(parts).rstrip() + "\n"
 
 
-def _relative_path(file_path: str, project_root: Path) -> str:
+def _relative_path(file_path: str, project_root: Path | None) -> str:
+    if project_root is None:
+        return Path(file_path).as_posix()
     try:
         return Path(file_path).resolve().relative_to(project_root.resolve()).as_posix()
     except ValueError:

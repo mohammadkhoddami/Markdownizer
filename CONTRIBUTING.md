@@ -43,5 +43,7 @@ coverage.
   Features that summarize or modify content are out of scope.
 - Zero runtime dependencies is a feature. New runtime imports need a strong
   justification.
-- The public API is `markdownizer.extract_project` and the `markdownizer` CLI.
-  Keep additions backward compatible.
+- The public API is `markdownizer.extract_project`, `markdownizer.build_project_ir`,
+  and the `markdownizer` CLI. Keep additions backward compatible.
+- The internal pipeline is `scan → parse → classify → Project IR → backend → write`.
+  Output backends (Markdown, JSON, compact) consume the same deterministic IR.

@@ -36,8 +36,15 @@ def test_console_script_entrypoint():
 
 
 def test_public_api_surface():
-    assert markdownizer.__all__ == ["extract_project"]
+    assert markdownizer.__all__ == [
+        "extract_project",
+        "build_project_ir",
+        "IR_VERSION",
+        "ProjectIR",
+    ]
     assert callable(markdownizer.extract_project)
+    assert callable(markdownizer.build_project_ir)
+    assert markdownizer.IR_VERSION == 1
 
 
 def test_py_typed_marker_present():
