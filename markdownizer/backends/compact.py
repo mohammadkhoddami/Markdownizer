@@ -22,7 +22,7 @@ def _symbol_line(symbol: Symbol, options: RenderOptions) -> list[str]:
         lines.append(f"inherits: {', '.join(symbol.base_classes)}")
     if symbol.decorators:
         lines.append(f"decorators: {', '.join(symbol.decorators)}")
-    if symbol.docstring not in (None, ""):
+    if symbol.docstring:
         lines.append("")
         lines.append(symbol.docstring.rstrip())
     lines.append("")
@@ -60,7 +60,7 @@ class CompactBackend:
             lines.append("")
             for module in modules_by_package.get(package, []):
                 lines.append(f"# Module: {module.path}")
-                if module.docstring not in (None, ""):
+                if module.docstring:
                     lines.append("")
                     lines.append(module.docstring.rstrip())
                 lines.append("")
