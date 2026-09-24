@@ -222,6 +222,30 @@ def test_stats_invalid_rank_exits(tmp_path):
         main(["stats", str(tmp_path), "--rank", "magic"])
 
 
+def test_stats_empty_project(tmp_path, capsys):
+    assert main(["stats", str(tmp_path)]) == 0
+    captured = capsys.readouterr()
+    assert "Symbols: 0" in captured.out
+
+
+def test_context_query_flag(tmp_path, capsys):
+    (tmp_path / "auth.py").write_text('"""Auth."""\ndef login():\n    """Login."""\n    pass\n')
+    (tmp_path / "other.py").write_text(
+        '"""Other."""\ndef unrelated():\n    """Nope."""\n    pass\n'
+    )
+    out = tmp_path / "out"
+    assert main(["context", str(tmp_path), "-o", str(out), "--query", "login"]) == 0
+    text = (out / "context.md").read_text(encoding="utf-8")
+    assert "login" in text
+    assert "unrelated" not in text
+
+
+def test_context_negative_max_tokens_returns_1(tmp_path, capsys):
+    (tmp_path / "mod.py").write_text('"""docs"""\n')
+    assert main(["context", str(tmp_path), "--max-tokens", "-10"]) == 1
+    assert "max_tokens must be positive" in capsys.readouterr().err
+
+
 def _assert_exits_with(argv: list[str], expected: str, capsys: pytest.CaptureFixture[str]) -> None:
     with pytest.raises(SystemExit):
         main(argv)

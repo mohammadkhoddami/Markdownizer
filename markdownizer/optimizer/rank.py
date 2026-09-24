@@ -11,6 +11,10 @@ Methods:
   (fixed iteration count for full determinism)
 * ``fanout`` — in-degree of each module in the import graph
 * ``simple`` — uniform file scores (no graph)
+
+Rank values are deterministic for a given platform (IEEE-754 addition
+order); the IR hash excludes ranks, so ``ir.hash`` is stable across
+platforms even if floating-point tie-breaking ever differs.
 """
 
 from __future__ import annotations

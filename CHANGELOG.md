@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.1] - 2026-08-30
+
+### Fixed
+
+- **Context packing emits each symbol exactly once.** The `debugging`
+  profile previously rendered every symbol twice (signature + full source,
+  which already contains the declaration), wasting up to half the token
+  budget. Symbols now get either full source (when it fits) or a
+  signature-only fallback (`optimizer/slice.py`).
+- **`included_symbols` counts unique symbols** instead of incrementing once
+  per emitted section.
+- **`estimated_tokens` counts the complete artifact** — header and
+  section separators included — instead of undercounting by ~12%.
+- `optimize_context()` now raises `ValueError` for non-positive
+  `max_tokens` instead of silently emitting a header-only artifact.
+- Token estimates for the project index are no longer computed twice.
+- The optional `tiktoken` import guard only swallows `ImportError`/`OSError`
+  instead of every exception.
+
+### Changed
+
+- The CLI help notes that project directories named `build`, `context`, or
+  `stats` must be prefixed with `./` (they shadow the command names).
+
 ## [0.4.0] - 2026-08-30
 
 ### Added

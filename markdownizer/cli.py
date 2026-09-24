@@ -83,7 +83,9 @@ def build_parser() -> argparse.ArgumentParser:
         description=(
             "Extract existing documentation from a Python project into "
             "Markdown files. Use 'markdownizer build <project>' for format "
-            "selection; the legacy form below is kept as a compatibility alias."
+            "selection; the legacy form below is kept as a compatibility "
+            "alias. If your project directory is named 'build', 'context', "
+            "or 'stats', prefix it with './'."
         ),
     )
     parser.set_defaults(command="build")

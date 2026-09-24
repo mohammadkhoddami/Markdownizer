@@ -18,7 +18,7 @@ try:
 
     _ENCODER = _tiktoken.get_encoding("cl100k_base")
     _HAS_TIKTOKEN = True
-except Exception:  # pragma: no cover - depends on optional dependency
+except (ImportError, OSError):  # pragma: no cover - depends on optional dependency
     _ENCODER = None
     _HAS_TIKTOKEN = False
 

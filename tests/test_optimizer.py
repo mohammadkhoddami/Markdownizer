@@ -166,3 +166,76 @@ def test_tiny_budget_only_header(tmp_path):
     ctx = optimize_context(ir, max_tokens=1)
     assert ctx.included_symbols == 0
     assert ctx.text.startswith("# Context:")
+
+
+def test_negative_budget_raises(tmp_path):
+    ir = _build(tmp_path)
+    with pytest.raises(ValueError):
+        optimize_context(ir, max_tokens=0)
+    with pytest.raises(ValueError):
+        optimize_context(ir, max_tokens=-50)
+
+
+def test_debugging_emits_each_symbol_once(tmp_path):
+    """M1: full source contains the signature — never duplicate it."""
+    ir = _build(tmp_path)
+    ctx = optimize_context(ir, max_tokens=10000, profile="debugging")
+    assert ctx.included_symbols == ctx.total_symbols
+    assert "## Signature" not in ctx.text
+    assert ctx.text.count("## Source Code") == ctx.included_symbols
+
+
+def test_debugging_falls_back_to_signature_when_source_does_not_fit(tmp_path):
+    """A symbol whose full source exceeds the budget still gets a signature."""
+    from tests.conftest import write_py
+
+    body = "\n".join(f"    x{i} = {i} * 7" for i in range(200))
+    write_py(
+        tmp_path / "big.py",
+        f'"""Big."""\ndef huge():\n    """Huge."""\n{body}\n    return 1\n',
+    )
+    ir = __import__("markdownizer").build_project_ir(tmp_path)
+    ctx = optimize_context(ir, max_tokens=150, profile="debugging")
+    assert "## Signature" in ctx.text
+    assert "## Source Code" not in ctx.text
+    assert ctx.included_symbols == 1
+
+
+def test_included_symbols_counts_unique_symbols(tmp_path):
+    """M2: each symbol counts once regardless of emission depth."""
+    ir = _build(tmp_path)
+    ctx = optimize_context(ir, max_tokens=10000, profile="debugging")
+    assert ctx.included_symbols == ctx.total_symbols
+
+
+def test_estimated_tokens_matches_artifact(tmp_path):
+    """M3: the estimate counts the complete artifact, header included."""
+    from markdownizer.optimizer.tokens import count_tokens
+
+    ir = _build(tmp_path)
+    for profile in ("architecture", "api", "debugging", "onboarding"):
+        ctx = optimize_context(ir, max_tokens=10000, profile=profile)
+        assert ctx.estimated_tokens == count_tokens(ctx.text), profile
+
+
+def test_edge_placement_orders_top_symbols_first(tmp_path):
+    """The highest-ranked symbol leads the artifact; the second leads the tail."""
+    ir = _build(tmp_path)
+    ctx = optimize_context(ir, max_tokens=10000, profile="api")
+    ranked = sorted(ir.symbols, key=lambda s: -s.rank)
+    top, second = ranked[0], ranked[1]
+    body = ctx.text.split("# Context:")[1]
+    top_index = body.find(f"# {top.framework}: {top.name}")
+    second_index = body.find(f"# {second.framework}: {second.name}")
+    assert top_index < second_index
+
+
+def test_context_query_flag(tmp_path):
+    from tests.conftest import write_py
+
+    write_py(tmp_path / "auth.py", '"""Auth."""\ndef login():\n    """Login."""\n    pass\n')
+    write_py(tmp_path / "other.py", '"""Other."""\ndef unrelated():\n    """Nope."""\n    pass\n')
+    ir = __import__("markdownizer").build_project_ir(tmp_path)
+    ctx = optimize_context(ir, max_tokens=5000, profile="api", query="login")
+    assert "login" in ctx.text
+    assert "unrelated" not in ctx.text

@@ -4,12 +4,14 @@ Turns a ranked ProjectIR into an AI-ready context artifact within a token
 budget, using deterministic layered emission:
 
 * layer 0 — project index (packages, modules, docstrings)
-* layer 1 — signatures + docstrings for public symbols
-* layer 2 — full source for ranked symbols
-* layer 3 — remaining symbol docstrings/comments when budget allows
+* layer 1 — per-symbol blocks: full source for the highest-ranked symbols,
+  signature-only for the rest (or docstrings only for ``include_source``
+  profiles without source)
 
-High-ranked symbols are placed at the start and end of the artifact
-(primacy/recency bias); lower-ranked content sits in the middle.
+Each symbol is emitted exactly once. High-ranked symbols are placed at the
+start and end of the artifact (primacy/recency bias); lower-ranked content
+sits in the middle. The reported token estimate counts the complete
+artifact, header included.
 """
 
 from __future__ import annotations
@@ -102,6 +104,55 @@ def _block_tokens(text: str, prefer_tiktoken: bool) -> float:
     return count_tokens(text, prefer_tiktoken=prefer_tiktoken)
 
 
+def _symbol_block(
+    symbol: Symbol,
+    profile: Profile,
+    prefer_tiktoken: bool,
+    budget: float,
+) -> tuple[str, float] | None:
+    """Render one symbol exactly once; ``None`` when nothing fits the budget."""
+    comments = profile.include_comments
+    if profile.include_source is True:
+        src_text = render_object(
+            symbol,
+            None,
+            include_source=True,
+            include_comments=comments,
+        )
+        src_cost = _block_tokens(src_text, prefer_tiktoken)
+        if src_cost <= budget:
+            return src_text, src_cost
+        sig_text = render_object(
+            symbol,
+            None,
+            include_source="signature",
+            include_comments=comments,
+        )
+        sig_cost = _block_tokens(sig_text, prefer_tiktoken)
+        return (sig_text, sig_cost) if sig_cost <= budget else None
+
+    if profile.include_source == "signature":
+        sig_text = render_object(
+            symbol,
+            None,
+            include_source="signature",
+            include_comments=comments,
+        )
+        sig_cost = _block_tokens(sig_text, prefer_tiktoken)
+        return (sig_text, sig_cost) if sig_cost <= budget else None
+
+    if symbol.docstring:
+        doc_text = render_object(
+            symbol,
+            None,
+            include_source=False,
+            include_comments=comments,
+        )
+        doc_cost = _block_tokens(doc_text, prefer_tiktoken)
+        return (doc_text, doc_cost) if doc_cost <= budget else None
+    return None
+
+
 def optimize_context(
     ir: ProjectIR,
     max_tokens: float,
@@ -114,19 +165,20 @@ def optimize_context(
 
     Args:
         ir: The project IR (ranked in place by this function).
-        max_tokens: Target token budget (soft limit, ±10% slop).
+        max_tokens: Target token budget (soft limit, ±10% slop). Must be > 0.
         profile: Profile preset name (see :mod:`markdownizer.optimizer.profiles`).
         query: Optional space-separated keyword prefilter on symbol names,
             frameworks, and docstrings (deterministic substring match).
         rank_method: ``pagerank`` (default), ``fanout``, or ``simple``.
         prefer_tiktoken: Use ``tiktoken`` when installed for token estimates.
+
+    Raises:
+        ValueError: If ``max_tokens`` is not positive.
     """
+    if float(max_tokens) <= 0:
+        raise ValueError(f"max_tokens must be positive, got {max_tokens!r}")
     rank_ir(ir, method=rank_method)
     profile_obj = get_profile(profile)
-    budget = float(max_tokens) * _BUDGET_SLOP
-    parts: list[str] = []
-    total: float = 0.0
-    included: int = 0
     total_symbols = len(ir.symbols)
 
     header = (
@@ -134,90 +186,45 @@ def optimize_context(
         f"(profile={profile_obj.name}, rank={rank_method}, "
         f"max_tokens={int(max_tokens)})"
     )
+    header_cost = _block_tokens(header, prefer_tiktoken)
+    budget = float(max_tokens) * _BUDGET_SLOP - header_cost
+
+    parts: list[str] = []
+    total: float = 0.0
 
     index = _render_index(ir)
-    if _block_tokens(index, prefer_tiktoken) <= budget:
+    index_cost = _block_tokens(index, prefer_tiktoken)
+    if index_cost <= budget:
         parts.append(index)
-        total += _block_tokens(index, prefer_tiktoken)
+        total += index_cost
 
     module_index = _render_module_index(ir)
-    if _block_tokens(module_index, prefer_tiktoken) <= budget:
+    module_cost = _block_tokens(module_index, prefer_tiktoken)
+    if module_cost <= budget:
         parts.append(module_index)
-        total += _block_tokens(module_index, prefer_tiktoken)
+        total += module_cost
 
     symbols = _select_symbols(ir, profile_obj, query)
     ordered = _edge_place(symbols)
 
-    signatures: list[tuple[Symbol, str, float]] = []
-    sources: list[tuple[Symbol, str, float]] = []
-    remainder: list[tuple[Symbol, str, float]] = []
-
+    included = 0
     for symbol in ordered:
-        if profile_obj.include_source is not False:
-            sig_text = render_object(
-                symbol,
-                None,
-                include_source="signature",
-                include_comments=profile_obj.include_comments,
-            )
-            sig_cost = _block_tokens(sig_text, prefer_tiktoken)
-            if sig_cost <= budget:
-                signatures.append((symbol, sig_text, sig_cost))
-
-        if profile_obj.include_source is True:
-            src_text = render_object(
-                symbol,
-                None,
-                include_source=True,
-                include_comments=profile_obj.include_comments,
-            )
-            src_cost = _block_tokens(src_text, prefer_tiktoken)
-            sources.append((symbol, src_text, src_cost))
-
-        if profile_obj.include_source is False and symbol.docstring:
-            doc_text = render_object(
-                symbol,
-                None,
-                include_source=False,
-                include_comments=profile_obj.include_comments,
-            )
-            doc_cost = _block_tokens(doc_text, prefer_tiktoken)
-            remainder.append((symbol, doc_text, doc_cost))
-
-    if profile_obj.include_source is not False:
-        for _, sig_text, sig_cost in signatures:
-            if total + sig_cost > budget:
-                break
-            parts.append("---")
-            parts.append("")
-            parts.append(sig_text)
-            total += sig_cost
-            included += 1
-
-    if profile_obj.include_source is True:
-        for _, src_text, src_cost in sources:
-            if total + src_cost > budget:
-                break
-            parts.append("---")
-            parts.append("")
-            parts.append(src_text)
-            total += src_cost
-            included += 1
-
-    if profile_obj.include_source is False:
-        for _, doc_text, doc_cost in remainder:
-            if total + doc_cost > budget:
-                break
-            parts.append("---")
-            parts.append("")
-            parts.append(doc_text)
-            total += doc_cost
-            included += 1
+        block = _symbol_block(symbol, profile_obj, prefer_tiktoken, budget)
+        if block is None:
+            continue
+        text, cost = block
+        if total + cost > budget:
+            break
+        parts.append("---")
+        parts.append("")
+        parts.append(text)
+        total += cost
+        included += 1
 
     text = "\n".join([header, "", *parts]).rstrip() + "\n"
     return OptimizedContext(
         text=text,
-        estimated_tokens=total,
+        estimated_tokens=_block_tokens(text, prefer_tiktoken),
         max_tokens=float(max_tokens),
         profile=profile_obj.name,
         rank_method=rank_method,
