@@ -6,6 +6,7 @@ import ast
 import io
 import tokenize
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Protocol
 
 
@@ -70,6 +71,19 @@ def _base_name(node: ast.expr) -> str:
 
 def _rightmost_name(name: str) -> str:
     return name.rsplit(".", 1)[-1] if name else ""
+
+
+def read_python_source(path: Path) -> str:
+    """Read a Python source file, tolerating non-UTF-8 encodings.
+
+    Uses ``utf-8-sig`` (which also strips a UTF-8 BOM) and falls back to
+    latin-1, which can decode every byte sequence without raising. A single
+    legacy-encoded file must never abort an entire project extraction.
+    """
+    try:
+        return path.read_text(encoding="utf-8-sig")
+    except UnicodeDecodeError:
+        return path.read_text(encoding="latin-1")
 
 
 def _unparse_or_empty(node: ast.AST | None) -> str:
@@ -337,8 +351,7 @@ def parse_file(file_path: str, source: str | None = None) -> tuple[DocObject, li
     ``source`` may be passed in to avoid re-reading the file from disk.
     """
     if source is None:
-        with open(file_path, encoding="utf-8") as fh:
-            source = fh.read()
+        source = read_python_source(Path(file_path))
 
     source_lines = source.splitlines()
     all_comments = _collect_comments(source)

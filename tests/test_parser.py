@@ -232,3 +232,27 @@ def test_file_path_populated(write_file):
     path = write_file("mod.py", "def f():\n    pass\n")
     _, objects = parse_file(str(path))
     assert Path(objects[0].file_path) == path
+
+
+def test_latin1_file_parses(tmp_path):
+    from markdownizer.parser import read_python_source
+
+    path = tmp_path / "legacy.py"
+    path.write_bytes(b'"""caf\xe9"""\ndef old():\n    pass\n')
+    source = read_python_source(path)
+    assert "café" in source
+    module, objects = parse_file(str(path))
+    assert module.docstring == "café"
+    assert objects[0].name == "old"
+
+
+def test_utf8_bom_file_parses(tmp_path):
+    from markdownizer.parser import read_python_source
+
+    path = tmp_path / "bom.py"
+    path.write_bytes(b'\xef\xbb\xbf"""BOM."""\ndef g():\n    pass\n')
+    source = read_python_source(path)
+    assert not source.startswith("\ufeff")
+    module, objects = parse_file(str(path))
+    assert module.docstring == "BOM."
+    assert objects[0].name == "g"

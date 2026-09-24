@@ -27,7 +27,7 @@ from typing import Any
 
 from markdownizer.classifier import classify
 from markdownizer.imports import ImportEdge, collect_import_edges
-from markdownizer.parser import DocObject, parse_file
+from markdownizer.parser import DocObject, parse_file, read_python_source
 from markdownizer.scanner import scan_python_files
 
 IR_VERSION = 1
@@ -336,7 +336,7 @@ def build_project_ir(project_root: Path, exclude: list[str] | None = None) -> Pr
     for py_file in files:
         rel = py_file.relative_to(project_root).as_posix()
         dotted = _module_dotted_name(rel)
-        source = py_file.read_text(encoding="utf-8")
+        source = read_python_source(py_file)
         module_obj, objects = parse_file(str(py_file), source=source)
 
         module_symbols = [_symbol_from_docobject(o, rel) for o in objects]

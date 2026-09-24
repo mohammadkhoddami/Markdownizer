@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.2] - 2026-08-30
+
+### Fixed
+
+- **Non-UTF-8 source files no longer abort a whole-project build.** Source
+  files are now decoded with `utf-8-sig` (BOM-tolerant) and fall back to
+  latin-1, which can decode any byte sequence — one legacy-encoded file can
+  no longer crash `extract_project()` (previously a single `UnicodeDecodeError`
+  killed the entire scan).
+- **The import graph only reflects module-level imports.** Imports inside
+  function bodies, class bodies, or `if __name__ == "__main__":` blocks are
+  no longer collected as structural dependencies, and `from __future__`
+  imports are filtered out. This keeps PageRank and future trace/query
+  features grounded in real module dependencies.
+
 ## [0.4.1] - 2026-08-30
 
 ### Fixed

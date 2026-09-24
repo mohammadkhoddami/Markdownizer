@@ -144,3 +144,42 @@ def test_dotted_import_resolution_to_init():
 
 def test_empty_source():
     assert _edges("") == []
+
+
+def test_nested_function_import_not_collected():
+    source = "def f():\n    import os\n    return os.path\n"
+    assert _edges(source) == []
+
+
+def test_main_guard_import_not_collected():
+    source = "import pkg.models\n\nif __name__ == '__main__':\n    import sys\n"
+    edges = _edges(source)
+    assert [e.imported_module for e in edges] == ["pkg.models"]
+
+
+def test_class_body_import_not_collected():
+    source = "class C:\n    def m(self):\n        import os\n"
+    assert _edges(source) == []
+
+
+def test_future_import_filtered():
+    source = "from __future__ import annotations\nimport pkg.models\n"
+    edges = _edges(source)
+    assert [e.imported_module for e in edges] == ["pkg.models"]
+
+
+def test_try_wrapped_import_not_collected():
+    """try/except-wrapped imports are conservatively treated as external."""
+    source = "try:\n    import pkg.models\nexcept ImportError:\n    pass\n"
+    assert _edges(source) == []
+
+
+def test_latin1_source_decodes():
+    from markdownizer.imports import collect_import_edges
+
+    edges = collect_import_edges(
+        '"""caf\xe9"""\nimport os\n'.encode("latin-1").decode("latin-1"),
+        "mod.py",
+        {"mod.py": "mod.py"},
+    )
+    assert [e.imported_module for e in edges] == ["os"]

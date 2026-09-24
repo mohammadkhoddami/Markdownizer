@@ -245,3 +245,34 @@ def test_unsorted_input_still_sorted(tmp_path):
     ir = build_project_ir(tmp_path)
     assert [m.path for m in ir.modules] == ["a/y.py", "b/z.py"]
     assert [s.qualified_name for s in ir.symbols] == ["y", "z"]
+
+
+def test_build_survives_non_utf8_file(tmp_path):
+    """A single latin-1 encoded file must not abort the whole build."""
+    from tests.conftest import write_py
+
+    write_py(tmp_path / "good.py", '"""Fine."""\ndef ok():\n    pass\n')
+    (tmp_path / "legacy.py").write_bytes(b'"""caf\xe9 latin-1"""\ndef old():\n    pass\n')
+    ir = build_project_ir(tmp_path)
+    assert [m.path for m in ir.modules] == ["good.py", "legacy.py"]
+    legacy = next(m for m in ir.modules if m.path == "legacy.py")
+    assert legacy.docstring == "café latin-1"
+    assert ir.stats.symbol_count == 2
+
+
+def test_build_survives_utf8_bom_file(tmp_path):
+    from tests.conftest import write_py
+
+    write_py(tmp_path / "a.py", "def f():\n    pass\n")
+    (tmp_path / "bom.py").write_bytes(b'\xef\xbb\xbf"""BOM doc."""\ndef g():\n    pass\n')
+    ir = build_project_ir(tmp_path)
+    assert [m.path for m in ir.modules] == ["a.py", "bom.py"]
+    bom = next(m for m in ir.modules if m.path == "bom.py")
+    assert bom.docstring == "BOM doc."
+
+
+def test_non_utf8_hash_stable(tmp_path):
+    (tmp_path / "legacy.py").write_bytes(b'"""caf\xe9"""\ndef old():\n    pass\n')
+    ir1 = build_project_ir(tmp_path)
+    ir2 = build_project_ir(tmp_path)
+    assert ir1.hash == ir2.hash

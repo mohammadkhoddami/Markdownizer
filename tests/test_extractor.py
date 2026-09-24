@@ -119,3 +119,15 @@ def test_extract_error_on_unwritable_output(sample_project, tmp_path):
         pytest.skip("directory is writable; cannot simulate")
     with pytest.raises(OSError):
         extract_project(sample_project, out / "sub" / "nested")
+
+
+def test_extract_survives_non_utf8_file(tmp_path):
+    """End-to-end: a legacy-encoded file does not abort extraction."""
+    (tmp_path / "good.py").write_text('"""Fine."""\ndef ok():\n    pass\n')
+    (tmp_path / "legacy.py").write_bytes(b'"""caf\xe9"""\ndef old():\n    pass\n')
+    out = tmp_path / "out"
+    written = extract_project(tmp_path, out)
+    assert sorted(p.name for p in written) == ["_root.md"]
+    md = (out / "_root.md").read_text(encoding="utf-8")
+    assert "# Function: old" in md
+    assert "café" in md

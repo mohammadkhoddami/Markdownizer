@@ -67,11 +67,17 @@ def _resolve_relative(
 
 
 def _collect_statement_imports(
-    node: ast.AST, module_map: dict[str, str], from_rel_path: str
+    module: ast.Module, module_map: dict[str, str], from_rel_path: str
 ) -> list[ImportEdge]:
+    """Collect module-level import statements.
+
+    Only top-level statements count: imports inside function bodies, class
+    bodies, or ``if __name__ == "__main__":`` blocks are not structural
+    module dependencies. ``from __future__`` imports are filtered out.
+    """
     edges: list[ImportEdge] = []
 
-    for child in ast.walk(node):
+    for child in module.body:
         if isinstance(child, ast.Import):
             for alias in child.names:
                 target = _resolve_absolute(alias.name, module_map)
@@ -87,6 +93,8 @@ def _collect_statement_imports(
                     )
                 )
         elif isinstance(child, ast.ImportFrom):
+            if child.module == "__future__":
+                continue
             if child.module is None:
                 # ``from . import x`` — the imported names are resolved
                 # relative to the current package.
