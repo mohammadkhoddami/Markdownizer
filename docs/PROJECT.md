@@ -213,12 +213,12 @@ Prints project counts, token estimate, and top-ranked files/symbols.
 ```python
 from pathlib import Path
 from markdownizer import (
-    extract_project,      # write backend output for a project
-    build_project_ir,     # build the ProjectIR (no output)
-    optimize_context,     # budgeted, ranked context artifact
-    IR_VERSION,           # current IR schema version (1)
-    ProjectIR,            # IR type
-    OptimizedContext,     # result type of optimize_context
+    extract_project,  # write backend output for a project
+    build_project_ir,  # build the ProjectIR (no output)
+    optimize_context,  # budgeted, ranked context artifact
+    IR_VERSION,  # current IR schema version (1)
+    ProjectIR,  # IR type
+    OptimizedContext,  # result type of optimize_context
 )
 
 written = extract_project(Path("."), Path("docs"), exclude=["tests/*"])

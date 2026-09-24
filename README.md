@@ -309,7 +309,7 @@ from pathlib import Path
 from markdownizer import build_project_ir, optimize_context
 
 ir = build_project_ir(Path("."))
-print(ir.hash)                # هش قطعی پروژه
+print(ir.hash)  # هش قطعی پروژه
 print(ir.stats.symbol_count)  # تعداد سمبل‌ها
 
 ctx = optimize_context(ir, max_tokens=20000, profile="api")
