@@ -155,6 +155,73 @@ def test_build_exclude(tmp_path, capsys):
     assert not (out / "tests.md").exists()
 
 
+def test_context_command_writes_file(tmp_path, capsys):
+    (tmp_path / "mod.py").write_text('"""docs"""\ndef documented():\n    """yes"""\n    pass\n')
+    out = tmp_path / "out"
+    assert main(["context", str(tmp_path), "-o", str(out), "--max-tokens", "2000"]) == 0
+    text = (out / "context.md").read_text(encoding="utf-8")
+    assert text.startswith("# Context:")
+    captured = capsys.readouterr()
+    assert "Wrote context.md" in captured.out
+
+
+def test_context_command_respects_budget(tmp_path, capsys):
+    (tmp_path / "mod.py").write_text('"""docs"""\ndef documented():\n    """yes"""\n    pass\n')
+    out = tmp_path / "out"
+    main(["context", str(tmp_path), "-o", str(out), "--max-tokens", "100", "-q"])
+    text = (out / "context.md").read_text(encoding="utf-8")
+    assert "# Context:" in text
+
+
+def test_context_command_quiet(tmp_path, capsys):
+    (tmp_path / "mod.py").write_text('"""docs"""\n')
+    out = tmp_path / "out"
+    assert main(["context", str(tmp_path), "-o", str(out), "-q"]) == 0
+    assert capsys.readouterr().out == ""
+
+
+def test_context_invalid_profile_returns_1(tmp_path, capsys):
+    (tmp_path / "mod.py").write_text('"""docs"""\n')
+    assert main(["context", str(tmp_path), "--profile", "nope"]) == 1
+    assert "unknown profile" in capsys.readouterr().err
+
+
+def test_context_missing_project_returns_2():
+    assert main(["context", "/definitely/not/here"]) == 2
+
+
+def test_stats_command(tmp_path, capsys):
+    (tmp_path / "mod.py").write_text('"""docs"""\ndef f():\n    pass\n')
+    assert main(["stats", str(tmp_path)]) == 0
+    captured = capsys.readouterr()
+    assert "Project:" in captured.out
+    assert "Symbols:" in captured.out
+    assert "Top files by importance:" in captured.out
+
+
+def test_stats_json(tmp_path, capsys):
+    import json
+
+    (tmp_path / "mod.py").write_text('"""docs"""\ndef f():\n    pass\n')
+    assert main(["stats", str(tmp_path), "--json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["stats"]["module_count"] == 1
+    assert "top_files" in payload
+    assert "top_symbols" in payload
+
+
+def test_stats_rank_method(tmp_path, capsys):
+    (tmp_path / "mod.py").write_text('"""docs"""\ndef f():\n    pass\n')
+    assert main(["stats", str(tmp_path), "--rank", "simple"]) == 0
+    assert "Symbols:" in capsys.readouterr().out
+
+
+def test_stats_invalid_rank_exits(tmp_path):
+    (tmp_path / "mod.py").write_text('"""docs"""\n')
+    with pytest.raises(SystemExit):
+        main(["stats", str(tmp_path), "--rank", "magic"])
+
+
 def _assert_exits_with(argv: list[str], expected: str, capsys: pytest.CaptureFixture[str]) -> None:
     with pytest.raises(SystemExit):
         main(argv)

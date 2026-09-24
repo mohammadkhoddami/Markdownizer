@@ -5,6 +5,44 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-08-30
+
+### Added
+
+- **Symbol ranking** (`markdownizer/optimizer/rank.py`): deterministic
+  importance scores for files and symbols.
+  - `pagerank` (default): PageRank power iteration over the import graph
+    (pure Python, fixed iteration count — fully deterministic)
+  - `fanout`: in-degree of each module; `simple`: uniform scores
+  - Framework-aware file boosts (Management Command, Django Model, URL
+    Configuration, DRF ViewSet/Serializer, `urls.py`/`settings.py`/…)
+  - Symbol importance = file score × public/private × documented factors
+  - Ranking data stored on the IR (`Symbol.rank`, `ProjectIR.file_ranks`)
+    and serialized in `project.json`; excluded from the deterministic hash
+- **Budget-aware context** (`markdownizer/optimizer/slice.py`):
+  `optimize_context(ir, max_tokens, profile, query, rank_method)` produces a
+  token-budgeted context artifact with layered emission (project index →
+  signatures → source/docstrings), edge placement (highest-ranked symbols at
+  the start and end), and a soft budget limit (±10% slop).
+- **Context profiles** (`markdownizer/optimizer/profiles.py`):
+  `architecture` (default), `api`, `debugging`, `refactor`, `django`,
+  `onboarding` — deterministic presets for source/comments/visibility.
+- **Token counting** (`markdownizer/optimizer/tokens.py`): optional
+  `tiktoken` (cl100k_base) with a `chars/3.3` stdlib fallback; core remains
+  dependency-free.
+- **CLI**:
+  - `markdownizer context <project> [--max-tokens N] [--profile NAME]
+    [--rank METHOD] [--query "keywords"] [--prefer-tiktoken]` → writes
+    `context.md`
+  - `markdownizer stats <project> [--rank METHOD] [--json]` → project
+    statistics, token estimate, and top-ranked files/symbols
+- Public API: `optimize_context` exported from `markdownizer`.
+
+### Changed
+
+- `project.json` now includes per-symbol `rank` and `file_ranks` (the JSON
+  backend ranks the IR before serialization).
+
 ## [0.3.1] - 2026-08-29
 
 ### Fixed

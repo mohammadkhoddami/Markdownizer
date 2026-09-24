@@ -45,6 +45,32 @@ markdownizer build /path/to/project -o ./docs --format json
 markdownizer build /path/to/project -o ./docs --format compact
 ```
 
+### Budgeted context
+
+Produce the best possible representation of a project within a token budget:
+
+```bash
+markdownizer context . --max-tokens 20000 --profile api
+markdownizer context . --profile django --query "user model"
+```
+
+Writes `context.md`. Options: `--max-tokens` (default 20000), `--profile`
+(`architecture` default, `api`, `debugging`, `refactor`, `django`,
+`onboarding`), `--rank` (`pagerank` default, `fanout`, `simple`), and
+`--query` (deterministic keyword prefilter).
+
+### Statistics
+
+```bash
+markdownizer stats . --rank pagerank
+markdownizer stats . --json
+```
+
+Shows project counts, a token estimate, and top-ranked files/symbols.
+Ranking is deterministic: PageRank over the import graph with
+framework-aware boosts (Django models, URL configs, management commands),
+combined with public/documented factors per symbol.
+
 Common options:
 
 ```bash
@@ -72,7 +98,7 @@ Run `markdownizer --help` for the full list.
 
 ```python
 from pathlib import Path
-from markdownizer import extract_project, build_project_ir
+from markdownizer import extract_project, build_project_ir, optimize_context
 
 written = extract_project(
     Path("."),
@@ -85,6 +111,11 @@ print(written)  # list of written output files
 # Or build the Project IR directly:
 ir = build_project_ir(Path("."), exclude=["tests/*"])
 print(ir.ir_version, ir.hash, ir.stats.symbol_count)
+
+# Or generate a budgeted, ranked context artifact:
+ctx = optimize_context(ir, max_tokens=20000, profile="api", query="auth")
+print(ctx.estimated_tokens, ctx.included_symbols)
+print(ctx.text)
 ```
 
 ### Output formats

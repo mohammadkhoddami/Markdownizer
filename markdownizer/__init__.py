@@ -6,6 +6,14 @@ It only extracts what already exists in the source code.
 
 from markdownizer.extractor import extract_project
 from markdownizer.ir import IR_VERSION, ProjectIR, build_project_ir
+from markdownizer.optimizer import OptimizedContext, optimize_context
 
-__version__ = "0.3.1"
-__all__ = ["extract_project", "build_project_ir", "IR_VERSION", "ProjectIR"]
+__version__ = "0.4.0"
+__all__ = [
+    "extract_project",
+    "build_project_ir",
+    "IR_VERSION",
+    "ProjectIR",
+    "optimize_context",
+    "OptimizedContext",
+]

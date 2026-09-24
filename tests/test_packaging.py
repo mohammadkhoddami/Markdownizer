@@ -41,9 +41,12 @@ def test_public_api_surface():
         "build_project_ir",
         "IR_VERSION",
         "ProjectIR",
+        "optimize_context",
+        "OptimizedContext",
     ]
     assert callable(markdownizer.extract_project)
     assert callable(markdownizer.build_project_ir)
+    assert callable(markdownizer.optimize_context)
     assert markdownizer.IR_VERSION == 1
 
 

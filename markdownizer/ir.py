@@ -10,7 +10,8 @@ the output backends. It is:
   of the repository; nothing is invented.
 
 Paths stored in the IR are POSIX-style paths relative to the project root.
-The machine-specific fields (``root``, ``python_version``, ``git``) are
+The machine-specific fields (``root``, ``python_version``, ``git``) and the
+derived ranking data (``Symbol.rank``, ``ProjectIR.file_ranks``) are
 informational only and are excluded from the deterministic hash.
 """
 
@@ -55,9 +56,10 @@ class Symbol:
     type_annotation: str = ""
     is_public: bool = True
     framework: str = ""
+    rank: float = 0.0
 
-    def to_dict(self) -> dict[str, Any]:
-        return {
+    def to_dict(self, include_rank: bool = True) -> dict[str, Any]:
+        data = {
             "id": self.id,
             "name": self.name,
             "qualified_name": self.qualified_name,
@@ -78,6 +80,9 @@ class Symbol:
             "is_public": self.is_public,
             "framework": self.framework,
         }
+        if include_rank:
+            data["rank"] = self.rank
+        return data
 
 
 @dataclass
@@ -197,6 +202,7 @@ class ProjectIR:
     imports: list[ImportEdge] = field(default_factory=list)
     inherits: list[InheritsEdge] = field(default_factory=list)
     defines: list[DefinesEdge] = field(default_factory=list)
+    file_ranks: dict[str, float] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
         """Full serialization including informational metadata."""
@@ -214,6 +220,7 @@ class ProjectIR:
             "imports": [e.to_dict() for e in self.imports],
             "inherits": [e.to_dict() for e in self.inherits],
             "defines": [e.to_dict() for e in self.defines],
+            "file_ranks": dict(self.file_ranks),
         }
 
     def to_json(self) -> str:
@@ -224,7 +231,8 @@ class ProjectIR:
         """The canonical, hashable portion of the IR.
 
         Excludes machine-specific metadata (``name``, ``root``,
-        ``python_version``, ``git``) and the hash itself, so the same
+        ``python_version``, ``git``), the derived ranking data
+        (``Symbol.rank``, ``file_ranks``), and the hash itself, so the same
         repository content always yields the same hash regardless of where
         the checkout lives or what the directory is called.
         """
@@ -233,7 +241,7 @@ class ProjectIR:
             "stats": self.stats.to_dict(),
             "packages": [p.to_dict() for p in self.packages],
             "modules": [m.to_dict() for m in self.modules],
-            "symbols": [s.to_dict() for s in self.symbols],
+            "symbols": [s.to_dict(include_rank=False) for s in self.symbols],
             "imports": [e.to_dict() for e in self.imports],
             "inherits": [e.to_dict() for e in self.inherits],
             "defines": [e.to_dict() for e in self.defines],
