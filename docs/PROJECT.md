@@ -1,6 +1,6 @@
 # Markdownizer — Project Documentation
 
-**Version:** 0.4.2 · **IR version:** 1 · **License:** MIT · **Python:** 3.9+ · **Runtime dependencies:** none
+**Version:** 0.4.4 · **IR version:** 1 · **License:** MIT · **Python:** 3.9+ · **Runtime dependencies:** none
 
 ---
 

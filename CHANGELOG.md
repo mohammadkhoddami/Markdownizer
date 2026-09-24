@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.5] - 2026-08-30
+
+### Changed
+
+- Package summary and README introduction now describe Markdownizer as a
+  **deterministic Codebase-to-Context Compiler** instead of only a
+  documentation extractor, reflecting what the tool actually does since
+  0.3.0 (Project IR, ranking, token budgets, multiple backends).
+- Added `ai`, `context`, `llm`, `codebase`, and `static-analysis` keywords
+  for PyPI discoverability.
+- Updated the `docs/PROJECT.md` version header.
+
 ## [0.4.4] - 2026-08-30
 
 ### Fixed

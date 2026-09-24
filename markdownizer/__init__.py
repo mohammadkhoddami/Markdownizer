@@ -8,7 +8,7 @@ from markdownizer.extractor import extract_project
 from markdownizer.ir import IR_VERSION, ProjectIR, build_project_ir
 from markdownizer.optimizer import OptimizedContext, optimize_context
 
-__version__ = "0.4.4"
+__version__ = "0.4.5"
 __all__ = [
     "extract_project",
     "build_project_ir",

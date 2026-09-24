@@ -8,11 +8,24 @@ dynamic = ["version"]
 authors = [
     { name = "Mohammad Hasan Khoddami", email = "mohammadh.khoddami@gmail.com" },
 ]
-description = "Extract documentation from Python projects into Markdown without rewriting it"
+description = "Deterministic Codebase-to-Context Compiler: turn Python projects into clean, token-efficient context for AI agents"
 readme = { file = "README.md", content-type = "text/markdown" }
 license = { file = "LICENSE" }
 requires-python = ">=3.9"
-keywords = ["documentation", "markdown", "docstring", "django", "drf", "ast"]
+keywords = [
+    "ai",
+    "ai-agents",
+    "codebase",
+    "context",
+    "documentation",
+    "markdown",
+    "docstring",
+    "django",
+    "drf",
+    "ast",
+    "static-analysis",
+    "llm",
+]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",

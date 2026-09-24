@@ -1,15 +1,19 @@
 # Markdownizer
 
-Extract existing documentation from Python projects into Markdown.
+Deterministic Codebase-to-Context Compiler for Python projects — turn source
+code into clean, token-efficient context that any AI agent can read, and
+readable Markdown for humans. Local, offline, zero dependencies, no LLM
+required.
 
 ![CI](https://github.com/mohammadkhoddami/Markdownizer/actions/workflows/ci.yml/badge.svg)
 [![PyPI](https://img.shields.io/pypi/v/markdownizer)](https://pypi.org/project/markdownizer/)
 ![Python](https://img.shields.io/pypi/pyversions/markdownizer)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-Markdownizer **never** generates, rewrites, summarizes, or improves documentation.
-It only extracts what is already present in your source code: docstrings,
-comments, decorators, and source.
+Markdownizer **never** generates, rewrites, summarizes, or improves
+documentation. It statically extracts what is already present in your source
+code — docstrings, comments, decorators, and source — builds a deterministic
+Project IR, ranks what matters, and emits context within a token budget.
 
 ## Installation
 
