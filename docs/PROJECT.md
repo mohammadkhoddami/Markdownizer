@@ -1,6 +1,6 @@
 # Markdownizer — Project Documentation
 
-**Version:** 0.4.4 · **IR version:** 1 · **License:** MIT · **Python:** 3.9+ · **Runtime dependencies:** none
+**Version:** 0.4.5 · **IR version:** 1 · **License:** MIT · **Python:** 3.9+ · **Runtime dependencies:** none
 
 ---
 
@@ -302,6 +302,9 @@ All outputs are deterministic: same content → same bytes.
 | 0.4.0 | ranking (pagerank/fanout/simple), token budgets, profiles, `context`/`stats` CLI |
 | 0.4.1 | context packing fixes (single emission, accurate metrics, budget validation) |
 | 0.4.2 | encoding robustness; module-level-only import graph |
+| 0.4.3 | Persian (فارسی) user guide in README |
+| 0.4.4 | ruff-format Markdown code blocks |
+| 0.4.5 | repositioned as Codebase-to-Context Compiler (summary, README, keywords) |
 
 ---
 
